@@ -1,0 +1,21 @@
+# Python & venv
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Environment variables & Secrets
+.env
+.env.local
+serviceAccountKey.json
+*firebase-adminsdk*.json
+
+# Local fallback DB cache
+backend/local_db_runtime.json
+
+# OS
+.DS_Store
+Thumbs.db
+
