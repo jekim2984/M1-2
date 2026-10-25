@@ -82,8 +82,11 @@ class DatabaseService:
 
             cred = None
             if settings.FIREBASE_SERVICE_ACCOUNT_JSON:
-                # JSON 문자열 환경변수에서 로드 (Render 배포 시 권장)
-                cred_dict = json.loads(settings.FIREBASE_SERVICE_ACCOUNT_JSON)
+                # JSON 문자열 환경변수에서 로드 (Vercel / Render 배포 시 권장)
+                raw_json = settings.FIREBASE_SERVICE_ACCOUNT_JSON.strip().strip("'").strip('"')
+                cred_dict = json.loads(raw_json)
+                if "private_key" in cred_dict and "\\n" in cred_dict["private_key"]:
+                    cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
                 cred = credentials.Certificate(cred_dict)
             elif settings.FIREBASE_SERVICE_ACCOUNT_PATH and os.path.exists(settings.FIREBASE_SERVICE_ACCOUNT_PATH):
                 # 로컬 JSON 키 파일 경로에서 로드

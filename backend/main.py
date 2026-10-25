@@ -4,10 +4,11 @@ from pathlib import Path
 from typing import Any, Dict
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from backend.config import settings
+from backend.frontend_assets import FRONTEND_ASSETS
 from backend.routers import chat_router, conversations_router, data_router
 from backend.services.firebase_service import db_service
 
@@ -53,20 +54,39 @@ def health_check() -> Dict[str, Any]:
     }
 
 
-# 로컬에서 백엔드 하나만 띄워도 프론트엔드 화면(HTML/CSS/JS)을 완벽하게 볼 수 있도록 정적 파일 서빙
+# 로컬 및 Vercel 서버리스 환경 모두에서 프론트엔드 화면(HTML/CSS/JS)을 안정적으로 서빙
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
-    @app.get("/", include_in_schema=False)
-    def serve_frontend_index() -> FileResponse:
-        return FileResponse(str(FRONTEND_DIR / "index.html"))
 
-    @app.get("/styles.css", include_in_schema=False)
-    def serve_frontend_css() -> FileResponse:
-        return FileResponse(str(FRONTEND_DIR / "styles.css"), media_type="text/css")
+def _serve_frontend_asset(filename: str, media_type: str) -> Response:
+    file_path = FRONTEND_DIR / filename
+    if file_path.exists():
+        content = file_path.read_text(encoding="utf-8")
+    else:
+        content = FRONTEND_ASSETS.get(filename, "")
+    return Response(content=content, media_type=media_type)
 
-    @app.get("/app.js", include_in_schema=False)
-    def serve_frontend_js() -> FileResponse:
-        return FileResponse(str(FRONTEND_DIR / "app.js"), media_type="application/javascript")
+
+@app.get("/", include_in_schema=False)
+@app.get("/index.html", include_in_schema=False)
+@app.get("/frontend/index.html", include_in_schema=False)
+def serve_frontend_index() -> Response:
+    return _serve_frontend_asset("index.html", "text/html; charset=utf-8")
+
+
+@app.get("/styles.css", include_in_schema=False)
+@app.get("/frontend/styles.css", include_in_schema=False)
+@app.get("/static/styles.css", include_in_schema=False)
+def serve_frontend_css() -> Response:
+    return _serve_frontend_asset("styles.css", "text/css; charset=utf-8")
+
+
+@app.get("/app.js", include_in_schema=False)
+@app.get("/frontend/app.js", include_in_schema=False)
+@app.get("/static/app.js", include_in_schema=False)
+def serve_frontend_js() -> Response:
+    return _serve_frontend_asset("app.js", "application/javascript; charset=utf-8")
+
 
