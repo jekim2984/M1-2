@@ -9,6 +9,7 @@ from backend.models.schemas import (
     DataSummaryResponse,
     DataUpdate,
 )
+from backend.seed_data import KNOWN_COMPLEX_PRESETS
 from backend.services.analytics_service import build_data_summary, get_chart_statistics
 from backend.services.firebase_service import db_service
 
@@ -112,6 +113,37 @@ def delete_data_item(item_id: str) -> Dict[str, Any]:
             detail=f"ID가 '{item_id}'인 데이터를 찾을 수 없습니다.",
         )
     return {"status": "deleted", "id": item_id, "message": "데이터가 삭제되었습니다."}
+
+
+@router.get(
+    "/presets",
+    summary="추천 관심 아파트 프리셋 목록 조회",
+)
+def get_known_presets() -> Dict[str, Any]:
+    """서울/수도권 주요 랜드마크 아파트 프리셋 목록을 반환합니다."""
+    items = []
+    # 기본 2단지 + 주요 프리셋
+    items.append({"key": "개포우성8차", "name": "개포우성8차", "desc": "강남 개포동 · 전용79㎡ · 통합재건축"})
+    items.append({"key": "개포현대3차", "name": "개포현대3차", "desc": "강남 개포동 · 대지지분 30.5평 · 용적률 147%"})
+    for k, v in KNOWN_COMPLEX_PRESETS.items():
+        items.append({
+            "key": k,
+            "name": v["official_name"],
+            "desc": f"{v['road_address']} · {v['buildings_and_units']}",
+            "main_area": v.get("main_area", ""),
+            "base_price_eok": round(v.get("base_price_manwon", 0) / 10000, 1),
+        })
+    return {"count": len(items), "presets": items}
+
+
+@router.post(
+    "/complex/{complex_name}",
+    summary="특정 아파트 단지 데이터셋 자동 구성 및 등록",
+)
+def setup_target_complex(complex_name: str) -> Dict[str, Any]:
+    """사용자가 워치리스트에 추가한 단지의 프로필 및 시계열 데이터가 없으면 자동 생성하여 즉시 세팅합니다."""
+    result = db_service.setup_complex_data(complex_name)
+    return result
 
 
 @router.post(

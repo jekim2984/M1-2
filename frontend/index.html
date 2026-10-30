@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>나만의 AI 부동산 비서 | 개포우성8차 & 현대3차 시세·매매타이밍 분석</title>
+  <title>나만의 AI 부동산 비서 | 관심 단지 워치리스트 시세·경매·매매타이밍 분석</title>
   <link rel="stylesheet" href="/styles.css" onerror="this.href='/static/styles.css'" />
-  <!-- Chart.js CDN (보너스 과제: 시계열 데이터 시각화 그래프) -->
+  <!-- Chart.js CDN (시계열 데이터 시각화 그래프) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -19,19 +19,25 @@
   <header class="top-header">
     <div class="brand-area">
       <div class="brand-logo">🏠</div>
-      <div>
-        <h1 class="brand-title">AI 부동산 시세 & 매매 타이밍 비서</h1>
-        <p class="brand-subtitle">
-          기본 탑재: <strong>개포우성8차 · 개포현대3차 (통합재건축)</strong> | 단지 자유 확장형 컨텍스트 주입 AI
+      <div class="brand-header-text">
+        <div class="brand-title-row">
+          <h1 class="brand-title">나만의 AI 부동산 비서</h1>
+          <div class="current-focus-badge" id="currentFocusBadge">
+            <span class="badge-dot"></span>
+            <span id="currentFocusComplexLabel">전체 보기 (통합 비교)</span>
+          </div>
+        </div>
+        <p class="brand-subtitle" id="brandSubtitle">
+          관심 단지 워치리스트 기반 맞춤형 실거래가 · 전세 동향 · 경매 포착 · 매매 타이밍 AI 진단
         </p>
       </div>
     </div>
 
-    <!-- 평소엔 심플한 알림 사인(배지)만 표시 -> 클릭 시 상세 모달 오픈! -->
+    <!-- 3대 알림 사인 & 다크모드 -->
     <div class="header-badges">
-      <button id="btnOpenProfileModal" class="alert-badge badge-profile" title="클릭하여 단지 기본 프로필 및 통합재건축 연관성 보기">
+      <button id="btnOpenProfileModal" class="alert-badge badge-profile" title="클릭하여 단지 기본 프로필 및 입지 분석 보기">
         <span class="badge-icon">🔗</span>
-        <span>통합재건축 & 단지 프로필</span>
+        <span id="profileBadgeText">단지 프로필 & 스펙</span>
       </button>
 
       <button id="btnOpenPolicyModal" class="alert-badge badge-policy" title="클릭하여 정부정책·교통호재 타임라인 및 실시간 뉴스 보기">
@@ -53,14 +59,39 @@
 
   <!-- 메인 컨테이너 -->
   <main class="main-container">
-    <!-- 상단: 분석 대상 단지 선택 필터 바 & 시스템 상태 -->
+    <!-- 상단: 관심 단지 워치리스트 관리 바 & 시스템 상태 -->
     <section class="filter-status-bar">
-      <div class="complex-tabs" id="complexSelectorTabs">
-        <span class="filter-label">🏢 집중 분석 단지:</span>
-        <button class="complex-pill active" data-complex="all">전체 보기 (통합 비교)</button>
-        <button class="complex-pill" data-complex="개포우성8차">개포우성8차 (전용79㎡)</button>
-        <button class="complex-pill" data-complex="개포현대3차">개포현대3차 (84·131·163㎡)</button>
+      <div class="watchlist-control-area">
+        <!-- 관심 단지 직접 입력 & 추천 랜드마크 칩 -->
+        <div class="watchlist-input-row">
+          <div class="input-search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input
+              type="text"
+              id="inputNewComplex"
+              placeholder="관심 아파트 검색/입력 (예: 잠실엘스, 대치은마, 래미안원베일리)..."
+              autocomplete="off"
+            />
+            <button id="btnAddComplex" class="btn-primary btn-sm">+ 관심단지 추가</button>
+          </div>
+
+          <div class="preset-chips-inline">
+            <span class="preset-chips-label">⭐ 추천 랜드마크:</span>
+            <div id="recommendedPresetsContainer" class="preset-chips-list">
+              <!-- JS에서 동적 로드 (대치은마, 잠실엘스, 원베일리, 마래푸, 올파포 등) -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 내 활성 워치리스트 탭 목록 -->
+        <div class="watchlist-tabs-wrapper">
+          <span class="filter-label">🏢 내 워치리스트:</span>
+          <div class="complex-tabs" id="complexSelectorTabs">
+            <!-- JS에서 동적 렌더링: [전체 보기] + [단지명 (X)] 탭들 -->
+          </div>
+        </div>
       </div>
+
       <div class="system-status">
         <span id="dbStatusBadge" class="status-pill">DB 연결 확인중</span>
         <span id="aiStatusBadge" class="status-pill">AI 엔진 확인중</span>
@@ -68,45 +99,49 @@
       </div>
     </section>
 
-    <!-- 상단 요약 대시보드 카드 4개 (/api/data/summary) -->
+    <!-- 상단 요약 대시보드 카드 4개 (/api/data/summary 동적 연동) -->
     <section class="summary-cards-grid">
+      <!-- 1번 카드: 기간 및 데이터 건수 -->
       <div class="summary-card">
         <div class="card-header">
-          <span class="card-label">📅 시계열 분석 기간 & 데이터 수</span>
-          <span class="card-tag">100개+ 충족</span>
+          <span class="card-label" id="card1Label">📅 시계열 분석 기간 & 건수</span>
+          <span class="card-tag" id="card1Tag">실시간 집계</span>
         </div>
         <div class="card-main-value" id="sumTotalCount">- 건</div>
         <div class="card-sub-text" id="sumPeriod">기간 불러오는 중...</div>
         <div class="card-sub-text" id="sumOverallMetrics">평균 - / 최고 - / 최저 -</div>
       </div>
 
-      <div class="summary-card card-woosung">
+      <!-- 2번 카드: 단지 매매가 & 전세 동향 -->
+      <div class="summary-card card-woosung" id="summaryCard2">
         <div class="card-header">
-          <span class="card-label">🏢 개포우성8차 (개포동 179 · 9층 · 261세대)</span>
-          <span class="card-tag tag-blue">전용 79㎡ 단일</span>
+          <span class="card-label" id="sumCard2Title">🏢 평균 매매 시세</span>
+          <span class="card-tag tag-blue" id="sumCard2Tag">실거래가 기준</span>
         </div>
-        <div class="card-main-value" id="sumW8Price">- 억 원</div>
-        <div class="card-sub-text" id="sumW8Range">최고 -억 / 최저 -억 (전세가율 ~40%)</div>
-        <div class="card-sub-text" id="sumW8Latest">최근 실거래: -</div>
+        <div class="card-main-value" id="sumCard2Price">- 억 원</div>
+        <div class="card-sub-text" id="sumCard2Range">최고 -억 / 최저 -억</div>
+        <div class="card-sub-text" id="sumCard2Latest">최근 실거래: -</div>
       </div>
 
-      <div class="summary-card card-hyundai">
+      <!-- 3번 카드: 단지 스펙 & 경매 포착 -->
+      <div class="summary-card card-hyundai" id="summaryCard3">
         <div class="card-header">
-          <span class="card-label">🏢 개포현대3차 (개포동 177 · 9층 · 198세대)</span>
-          <span class="card-tag tag-green">대지지분 30.5평</span>
+          <span class="card-label" id="sumCard3Title">🏛️ 단지 스펙 & 경매 물건</span>
+          <span class="card-tag tag-green" id="sumCard3Tag">건축물대장/법원</span>
         </div>
-        <div class="card-main-value" id="sumH3Price">- 억 원</div>
-        <div class="card-sub-text" id="sumH3Range">58평 최고 40.5억 / 32평 최고 28.2억</div>
-        <div class="card-sub-text" id="sumH3Latest">최근 실거래: -</div>
+        <div class="card-main-value" id="sumCard3Price">-</div>
+        <div class="card-sub-text" id="sumCard3Range">스펙 불러오는 중...</div>
+        <div class="card-sub-text" id="sumCard3Latest">경매 안전마진 확인 중...</div>
       </div>
 
-      <div class="summary-card card-timing">
+      <!-- 4번 카드: 가격 트렌드 & AI 매매 타이밍 신호 -->
+      <div class="summary-card card-timing" id="summaryCard4">
         <div class="card-header">
           <span class="card-label">📈 최근 트렌드 & 매매 타이밍 신호</span>
-          <span class="card-tag tag-amber">선행지표: 전세가</span>
+          <span class="card-tag tag-amber" id="sumCard4Tag">전세·실거래 선행진단</span>
         </div>
         <div class="card-main-value" id="sumTrendShort">분석 중...</div>
-        <div class="card-sub-text" id="sumTimingSignal">전세가 동향 및 경매 안전마진 계산 중...</div>
+        <div class="card-sub-text" id="sumTimingSignal">전세가 동향 및 가격 갭 진단 중...</div>
       </div>
     </section>
 
@@ -117,7 +152,7 @@
         <div class="panel-header">
           <div>
             <h2 class="panel-title">🤖 나만의 AI 부동산 비서 채팅</h2>
-            <p class="panel-desc">데이터 요약 컨텍스트 주입 + Function Calling 자동 도구 호출</p>
+            <p class="panel-desc">선택 단지 컨텍스트 주입 + Function Calling 자동 도구 호출</p>
           </div>
           <div class="chat-header-actions">
             <button id="btnToggleHistory" class="btn-secondary btn-sm">💬 이전 대화 기록 (<span id="convCountBadge">0</span>)</button>
@@ -136,20 +171,9 @@
           </ul>
         </div>
 
-        <!-- 원클릭 추천 질문 칩 -->
-        <div class="quick-prompts">
-          <button class="prompt-chip" data-prompt="개포우성8차와 개포현대3차의 기본 스펙(층수, 세대수, 용적률, 대지지분)과 통합재건축(독립정산제) 연관성을 자세히 비교해 줘.">
-            🔗 통합재건축 & 스펙 비교
-          </button>
-          <button class="prompt-chip" data-prompt="우성8차와 현대3차에서 전세가가 매매가에 미치는 영향은 어떻고, 지금 매매 시기(매수 타이밍)로 적절한지 진단해 줘.">
-            📊 전세가 영향 & 매수 타이밍
-          </button>
-          <button class="prompt-chip" data-prompt="현재 포착된 경매 매물 상세 내역과 토지거래허가구역 실거주 면제 혜택, 전세를 활용한 적정 입찰가 및 실투자금을 분석해 줘.">
-            🚨 경매 물건 입찰가 분석
-          </button>
-          <button class="prompt-chip" data-prompt="최근 정부 부동산 정책(안전진단 완화, 토허제)과 교통 호재(GTX-A/C, 영동대로 개발)가 두 단지 시세에 미친 영향을 알려줘.">
-            📢 정부정책 & 교통호재 영향
-          </button>
+        <!-- 원클릭 추천 질문 칩 (선택 단지 기준으로 동적 변경) -->
+        <div class="quick-prompts" id="quickPromptsContainer">
+          <!-- JS에서 단지별 질문 칩 동적 생성 -->
         </div>
 
         <!-- 채팅 메시지 표시 영역 -->
@@ -157,20 +181,22 @@
           <div class="message assistant-message">
             <div class="message-avatar">🤖</div>
             <div class="message-bubble">
-              <div class="message-meta">AI 부동산 비서 · 실시간 데이터 요약 주입 완료</div>
+              <div class="message-meta">AI 부동산 비서 · 맞춤형 컨텍스트 주입 완료</div>
               <div class="message-content">
-                안녕하세요! <strong>개포우성8차 & 개포현대3차(통합재건축)</strong> 시계열 실거래가, 전세가 추이, 정부정책·교통호재, 그리고 <strong>경매 포착 물건</strong>까지 모두 파악하고 있는 AI 부동산 비서입니다.<br><br>
-                • 상단의 <strong>[🔗 통합재건축 프로필]</strong>, <strong>[📢 정책·교통호재]</strong>, <strong>[🚨 경매 포착]</strong> 알림 배지를 클릭하면 핵심 정보를 한눈에 보실 수 있습니다.<br>
-                • 우측 데이터 관리 창에서 다른 아파트 단지를 새로 추가하시면, 코드 수정 없이 <strong>즉시 해당 단지의 AI 비서로도 확장</strong>됩니다. 무엇이든 물어보세요!
+                안녕하세요! <strong>나만의 관심 아파트 단지</strong>를 워치리스트에 등록해 두고, 
+                실거래가·전세가 흐름·재건축/스펙·정부정책·경매 물건까지 실시간으로 분석해 드리는 <strong>AI 부동산 비서</strong>입니다.<br><br>
+                • 상단 검색창에서 관심 있는 아파트(예: <code>대치은마</code>, <code>잠실엘스</code>, <code>마포래미안푸르지오</code> 등)를 추가하면 즉시 해당 단지 모드로 전환됩니다.<br>
+                • 필요 없는 단지는 워치리스트 탭의 <code>✕</code>를 눌러 언제든 제외할 수 있으며, 나중에 다시 검색하면 즉시 복원됩니다.<br>
+                • 무엇이든 편하게 물어보세요!
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 로딩 인디케이터 (과제 필수 요구사항) -->
+        <!-- 로딩 인디케이터 -->
         <div id="chatLoading" class="chat-loading hidden">
           <div class="spinner"></div>
-          <span>AI 비서가 시계열 데이터 요약과 내부 도구(Function Calling)를 분석하여 답변을 작성 중입니다...</span>
+          <span>AI 비서가 시계열 데이터 요약과 내부 분석 도구를 활용하여 답변을 작성 중입니다...</span>
         </div>
 
         <!-- 채팅 입력 폼 -->
@@ -178,7 +204,7 @@
           <input
             type="text"
             id="chatInput"
-            placeholder="질문을 입력하세요 (예: 우성8차 최근 실거래가랑 전세가 흐름 어때? / 경매 물건 얼마에 입찰할까?)"
+            placeholder="질문을 입력하세요 (예: 최근 실거래가와 전세가 흐름 어때? / 경매 물건 얼마에 입찰할까?)"
             autocomplete="off"
             required
           />
@@ -188,19 +214,16 @@
 
       <!-- [우측 컬럼] 시세 시각화 차트 + 데이터 관리(CRUD) -->
       <div class="right-column">
-        <!-- 1. 시세 추이 비교 그래프 (보너스 과제: 시각화 그래프 1개+) -->
+        <!-- 1. 시세 추이 비교 그래프 (Chart.js) -->
         <div class="panel chart-panel">
           <div class="panel-header">
             <div>
               <h2 class="panel-title">📈 단지별 매매 실거래가 추이 & 경매·정책 타임라인</h2>
-              <p class="panel-desc">실거래가(선)와 경매 포착가(🚨 빨간 별표), 정책/교통호재(📢 삼각형)를 한눈에 비교</p>
+              <p class="panel-desc">실거래가(선)와 경매 포착가(🚨 별표), 정책/교통호재(📢 삼각형) 비교</p>
             </div>
             <div class="chart-controls">
               <select id="chartFilterSelect" class="select-sm">
-                <option value="all">전체 단지 + 경매/정책 표시</option>
-                <option value="compare_30">국민평형 비교 (우성8차 79㎡ vs 현대3차 84㎡)</option>
-                <option value="개포우성8차">개포우성8차만 보기</option>
-                <option value="개포현대3차">개포현대3차만 보기</option>
+                <!-- JS에서 동적 옵션 생성 -->
               </select>
             </div>
           </div>
@@ -213,26 +236,20 @@
         <div class="panel crud-panel">
           <div class="panel-header">
             <div>
-              <h2 class="panel-title">🗂️ 시계열 데이터 관리 (CRUD) & 단지 추가</h2>
-              <p class="panel-desc">(date, value, memo) 추가·수정·삭제 시 요약과 차트, AI 컨텍스트에 즉시 반영</p>
+              <h2 class="panel-title">🗂️ 관심 매물/실거래 데이터 관리 (CRUD)</h2>
+              <p class="panel-desc">새로운 실거래·호가·경매 메모를 추가·수정·삭제하면 요약과 차트, AI 비서에 즉시 반영됩니다.</p>
             </div>
             <div class="crud-export-btns">
-              <button id="btnExportCSV" class="btn-outline btn-sm" title="현재 데이터를 CSV 파일로 다운로드">⬇️ CSV 내보내기</button>
-              <button id="btnExportJSON" class="btn-outline btn-sm" title="현재 데이터를 JSON 파일로 다운로드">⬇️ JSON 내보내기</button>
+              <button id="btnExportCSV" class="btn-outline btn-sm" title="현재 데이터를 CSV 파일로 다운로드">⬇️ CSV</button>
+              <button id="btnExportJSON" class="btn-outline btn-sm" title="현재 데이터를 JSON 파일로 다운로드">⬇️ JSON</button>
             </div>
           </div>
 
           <!-- 데이터 추가 / 수정 폼 -->
           <form id="dataCrudForm" class="crud-form">
             <input type="hidden" id="editDataId" value="" />
-            <div class="preset-bar">
-              <span class="preset-label">말머리 빠른 입력:</span>
-              <button type="button" class="preset-btn" data-prefix="[개포우성8차] 전용79㎡ 층 매매 실거래 (전세가 억 동반)">+ 우성8차 실거래</button>
-              <button type="button" class="preset-btn" data-prefix="[개포현대3차] 전용84㎡(32평) 층 매매 실거래 (대지지분 19.4평)">+ 현대3차 실거래</button>
-              <button type="button" class="preset-btn" data-prefix="[경매매물] [진행중] 개포우성8차 동 층 | 감정가 억 ➔ 최저입찰가 억 | 토허제 실거주 면제">+ 🚨 경매매물</button>
-              <button type="button" class="preset-btn" data-prefix="[정부정책] ">+ 📢 정부정책</button>
-              <button type="button" class="preset-btn" data-prefix="[교통호재] ">+ 🚇 교통호재</button>
-              <button type="button" class="preset-btn" data-prefix="[대치은마] 전용76㎡ 층 매매 실거래 (신규 관심 단지 추가)">+ 🆕 다른 단지 추가</button>
+            <div class="preset-bar" id="crudPresetBar">
+              <!-- JS에서 현재 선택 단지에 맞춰 동적 프리셋 버튼 렌더링 -->
             </div>
 
             <div class="crud-inputs-row">
@@ -249,7 +266,7 @@
                 <input
                   type="text"
                   id="inputMemo"
-                  placeholder="[개포우성8차] 전용79㎡ 6층 매매 실거래 (전세가 11억 강세)"
+                  placeholder="[단지명] 전용84㎡ 6층 매매 실거래 (전세가 11억 강세)"
                   required
                 />
               </div>
@@ -297,28 +314,28 @@
   </main>
 
   <!-- ===================================================================== -->
-  <!-- 모달 1: 🚨 경매 포착 특별 알림 모달 (클릭 시에만 깔끔하게 오픈!) -->
+  <!-- 모달 1: 🚨 경매 포착 특별 알림 모달 -->
   <!-- ===================================================================== -->
   <div id="auctionModal" class="modal-overlay hidden">
     <div class="modal-box modal-auction">
       <div class="modal-header">
         <div>
-          <span class="modal-badge badge-red">🚨 특별 관리</span>
-          <h3 class="modal-title">경매 포착 물건 & 과거 낙찰 사례 브리핑</h3>
+          <span class="modal-badge badge-red">🚨 특별 모니터링</span>
+          <h3 class="modal-title" id="auctionModalTitle">경매 포착 물건 & 과거 낙찰 사례 브리핑</h3>
         </div>
         <button class="modal-close" data-close="auctionModal">✕</button>
       </div>
       <div class="modal-body">
-        <div class="auction-highlight-notice">
-          💡 <strong>왜 개포동에서 경매 물건이 특별할까요?</strong><br />
-          강남구 개포동은 <strong>토지거래허가구역(매수 시 2년 실거주 의무)</strong>이지만, <strong>법원 경매로 낙찰받는 물건은 토지거래허가 및 실거주 의무가 면제</strong>되어 낙찰 직후 <strong>전세(우성8차 약 10.8억 / 현대3차 약 13.5억)를 놓는 레버리지 투자</strong>가 가능합니다!
-          또한 경매 최저입찰가는 일반 매매 평균가를 왜곡하지 않도록 별도 분리 집계됩니다.
+        <div class="auction-highlight-notice" id="auctionNoticeBox">
+          💡 <strong>법원 경매의 특별한 레버리지 혜택</strong><br />
+          토지거래허가구역(강남구·송파구 등 주요 지역) 내 아파트라도, <strong>법원 경매로 낙찰받는 물건은 토지거래허가 및 2년 실거주 의무가 전면 면제</strong>되어 낙찰 즉시 전세를 놓는 갭투자가 가능합니다.
+          또한 경매 최저입찰가는 일반 매매 평균가를 왜곡하지 않도록 백엔드에서 자동 분리 집계됩니다.
         </div>
 
         <h4 class="sub-section-title">🔴 현재 진행 중인 경매 포착 물건</h4>
         <div id="activeAuctionContainer" class="auction-cards-list"></div>
 
-        <h4 class="sub-section-title" style="margin-top: 18px;">📌 과거 법원경매 낙찰 레퍼런스 (투심 확인용)</h4>
+        <h4 class="sub-section-title" style="margin-top: 18px;">📌 과거 법원경매 낙찰 레퍼런스</h4>
         <div id="pastAuctionContainer" class="auction-cards-list"></div>
       </div>
       <div class="modal-footer">
@@ -329,14 +346,14 @@
   </div>
 
   <!-- ===================================================================== -->
-  <!-- 모달 2: 🔗 통합재건축 연관성 & 단지 기본 프로필 모달 -->
+  <!-- 모달 2: 🔗 단지 기본 프로필 & 입지 분석 모달 -->
   <!-- ===================================================================== -->
   <div id="profileModal" class="modal-overlay hidden">
     <div class="modal-box">
       <div class="modal-header">
         <div>
-          <span class="modal-badge badge-blue">🪪 고정 단지 프로필 사전</span>
-          <h3 class="modal-title" id="profileModalTitle">개포우성8차 ↔ 개포현대3차 통합재건축 연관성 & 상세 스펙</h3>
+          <span class="modal-badge badge-blue">🪪 단지 프로필 & 스펙</span>
+          <h3 class="modal-title" id="profileModalTitle">단지 상세 건축 스펙 & 입지 분석</h3>
         </div>
         <button class="modal-close" data-close="profileModal">✕</button>
       </div>
@@ -345,7 +362,7 @@
         <div id="profileComplexGrid" class="profile-complex-grid"></div>
       </div>
       <div class="modal-footer">
-        <button id="btnAskAiProfile" class="btn-primary">🤖 AI 비서에게 두 단지 통합재건축 & 대지지분 심층 비교 요청하기</button>
+        <button id="btnAskAiProfile" class="btn-primary">🤖 AI 비서에게 선택 단지 심층 사업성·가치 분석 요청하기</button>
       </div>
     </div>
   </div>
@@ -358,20 +375,20 @@
       <div class="modal-header">
         <div>
           <span class="modal-badge badge-amber">📢 거시 정책 & 인프라</span>
-          <h3 class="modal-title">정부정책 · 교통호재 타임라인 & 실시간 뉴스 검색</h3>
+          <h3 class="modal-title" id="policyModalTitle">정부정책 · 교통호재 타임라인 & 실시간 뉴스</h3>
         </div>
         <button class="modal-close" data-close="policyModal">✕</button>
       </div>
       <div class="modal-body">
         <!-- 실시간 구글 뉴스 RSS 검색 -->
         <div class="news-search-box">
-          <h4>🌐 실시간 부동산 정책 · 교통호재 · 재건축 뉴스 조회</h4>
+          <h4>🌐 실시간 부동산 정책 · 교통호재 · 뉴스 조회</h4>
           <div class="news-search-row">
             <input
               type="text"
               id="newsQueryInput"
-              value="개포동 재건축 OR 강남 토지거래허가구역 OR GTX 수서 삼성"
-              placeholder="검색할 정책/교통호재 키워드 입력"
+              value="부동산 정책 OR 토지거래허가구역 OR 재건축"
+              placeholder="검색할 정책/교통호재/단지명 키워드 입력"
             />
             <button id="btnFetchNews" class="btn-primary btn-sm">실시간 뉴스 검색</button>
           </div>
@@ -389,10 +406,10 @@
     </div>
   </div>
 
-  <!-- 토스트 알림 -->
+  <!-- 토스트 알림 컨테이너 -->
   <div id="toastContainer" class="toast-container"></div>
 
+  <!-- 프론트엔드 스크립트 -->
   <script src="/app.js" onerror="var s=document.createElement('script');s.src='/static/app.js';document.body.appendChild(s);"></script>
 </body>
 </html>
-

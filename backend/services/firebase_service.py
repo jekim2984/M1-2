@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from backend.config import settings
-from backend.seed_data import INITIAL_SEED_DATA
+from backend.seed_data import INITIAL_SEED_DATA, KNOWN_COMPLEX_PRESETS, build_auto_complex_dataset
 
 # 로컬 백업 스토어 파일 경로 (Firebase 미연결 시 및 Vercel 서버리스 /tmp 폴백 지원)
 _DEFAULT_LOCAL_PATH = Path(__file__).resolve().parent.parent / "local_db_runtime.json"
@@ -35,26 +35,28 @@ def classify_memo(memo: str) -> tuple[str, Optional[str]]:
     first_tag = tags[0].strip() if tags else ""
 
     # 1. 카테고리 판별
-    if "경매" in first_tag or "경매" in memo_text[:25]:
+    if "경매" in first_tag or "경매" in memo_text[:30]:
         category = "auction"
-    elif "정책" in first_tag or "정부정책" in memo_text[:25] or "토지거래허가" in first_tag:
+    elif "정책" in first_tag or "정부정책" in memo_text[:30] or "토지거래허가" in first_tag:
         category = "policy"
     elif "교통" in first_tag or "호재" in first_tag or "GTX" in first_tag:
         category = "transit"
     else:
         category = "trade"
 
-    # 2. 단지명 자동 추출 (새로운 아파트를 추가해도 자동으로 인식!)
+    # 2. 단지명 자동 추출 (새로운 아파트를 추가해도 모든 카테고리에서 자동으로 인식!)
     complex_name: Optional[str] = None
     if "우성8차" in memo_text or "8차우성" in memo_text:
         complex_name = "개포우성8차"
     elif "현대3차" in memo_text:
         complex_name = "개포현대3차"
-    elif first_tag and category == "trade":
-        # 예: [대치은마], [잠실주공5단지/실거래] 등에서 단지명 추출
-        cleaned = re.split(r"[/·|]", first_tag)[0].strip()
-        if cleaned not in ("정부정책", "교통호재", "경매매물", "경매낙찰", "실거래", "매매"):
-            complex_name = cleaned
+    else:
+        skip_prefixes = ("정부정책", "교통호재", "경매매물", "경매낙찰", "실거래", "매매", "진행중", "유찰", "낙찰")
+        for t in tags:
+            cleaned = re.split(r"[/·|]", t)[0].strip()
+            if cleaned and not any(cleaned.startswith(sp) for sp in skip_prefixes):
+                complex_name = cleaned
+                break
 
     return category, complex_name
 
@@ -420,6 +422,60 @@ class DatabaseService:
             del self._local_cache["conversations"][conv_id]
             self._save_local_store()
             return True
+
+    def get_custom_profiles(self) -> Dict[str, Any]:
+        """사용자가 입력/설정한 추가 아파트 단지의 프로필 및 연관성 요약 조회"""
+        return self._local_cache.setdefault("custom_profiles", {})
+
+    def setup_complex_data(self, raw_complex_name: str) -> Dict[str, Any]:
+        """
+        사용자가 워치리스트에서 단지를 추가하거나 선택했을 때:
+        - 이미 해당 단지 실거래 데이터(2건 이상)가 있으면 유지하고,
+        - 데이터가 없는 신규 단지이면 프로필 + 시계열 실거래 + 경매 + 정책 데이터를 자동 생성하여 즉시 구성합니다.
+        """
+        clean_name = raw_complex_name.strip().strip("[]").strip()
+        if not clean_name or clean_name in ("all", "전체"):
+            return {"complex_name": "all", "created_count": 0, "already_exists": True}
+        if "우성8차" in clean_name or "8차우성" in clean_name:
+            clean_name = "개포우성8차"
+        elif "현대3차" in clean_name:
+            clean_name = "개포현대3차"
+
+        existing_trades = [
+            it
+            for it in self.list_data(complex_filter=clean_name, category_filter="trade")
+            if it.get("complex_name") == clean_name
+        ]
+
+        custom_map = self._local_cache.setdefault("custom_profiles", {})
+        bundle = build_auto_complex_dataset(clean_name)
+        if clean_name not in custom_map:
+            custom_map[clean_name] = {
+                "profile": bundle["profile"],
+                "relationship_summary": bundle["relationship_summary"],
+            }
+            self._save_local_store()
+
+        if clean_name in ("개포우성8차", "개포현대3차") or len(existing_trades) >= 2:
+            return {
+                "complex_name": clean_name,
+                "created_count": 0,
+                "already_exists": True,
+                "profile": custom_map[clean_name]["profile"],
+            }
+
+        # 신규 단지 시계열 아이템 생성 및 저장
+        created_count = 0
+        for item in bundle["seed_items"]:
+            self.create_data(date=item["date"], value=item["value"], memo=item["memo"])
+            created_count += 1
+
+        return {
+            "complex_name": clean_name,
+            "created_count": created_count,
+            "already_exists": False,
+            "profile": custom_map[clean_name]["profile"],
+        }
 
 
 db_service = DatabaseService()

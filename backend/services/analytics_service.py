@@ -4,7 +4,7 @@ import math
 import statistics
 from typing import Any, Dict, List, Optional
 
-from backend.seed_data import DEFAULT_COMPLEX_PROFILES
+from backend.seed_data import DEFAULT_COMPLEX_PROFILES, KNOWN_COMPLEX_PRESETS, build_auto_complex_dataset
 from backend.services.firebase_service import db_service
 
 
@@ -229,18 +229,41 @@ def build_data_summary(selected_complex: Optional[str] = None) -> Dict[str, Any]
         for pt in reversed(policy_transit_items)
     ]
 
-    # 4. 새로 추가된 단지가 있으면 프로필 사전에 동적 병합
-    profiles = {
-        "relationship_summary": DEFAULT_COMPLEX_PROFILES["relationship_summary"],
-        "complexes": dict(DEFAULT_COMPLEX_PROFILES["complexes"]),
-    }
+    # 4. 단지 프로필 사전 구성 (기본 + 프리셋 + 사용자 등록 커스텀 병합)
+    custom_profiles = db_service.get_custom_profiles()
+    merged_complexes = dict(DEFAULT_COMPLEX_PROFILES["complexes"])
+
+    # 프리셋 단지들 기본 병합
+    for p_name, p_data in KNOWN_COMPLEX_PRESETS.items():
+        if p_name not in merged_complexes:
+            merged_complexes[p_name] = {
+                "official_name": p_data["official_name"],
+                "jibun_address": p_data["jibun_address"],
+                "road_address": p_data["road_address"],
+                "completion_date": p_data["completion_date"],
+                "floors": p_data["floors"],
+                "buildings_and_units": p_data["buildings_and_units"],
+                "area_types": p_data["area_types"],
+                "floor_area_ratio": p_data["floor_area_ratio"],
+                "avg_land_share": p_data["avg_land_share"],
+                "subway_school": p_data["subway_school"],
+                "recent_jeonse_range": p_data["recent_jeonse_range"],
+                "characteristics": p_data["characteristics"],
+            }
+
+    # 커스텀 등록 프로필 병합
+    for c_name, c_data in custom_profiles.items():
+        if isinstance(c_data, dict) and "profile" in c_data:
+            merged_complexes[c_name] = c_data["profile"]
+
+    # 실거래 데이터로 등록된 단지 추가 보강
     for c_name, c_stat in by_complex.items():
-        if c_name not in profiles["complexes"]:
-            profiles["complexes"][c_name] = {
+        if c_name not in merged_complexes:
+            merged_complexes[c_name] = {
                 "official_name": c_name,
                 "jibun_address": "사용자 추가 분석 단지",
-                "road_address": "데이터 기반 자동 인식 단지",
-                "completion_date": "변동/사용자 지정",
+                "road_address": f"{c_name} 단지 일대",
+                "completion_date": "실거래 메모 참조",
                 "floors": "실거래 메모 참조",
                 "buildings_and_units": f"등록된 시계열 데이터 {c_stat['count']}건",
                 "area_types": "등록 메모 기준",
@@ -251,13 +274,64 @@ def build_data_summary(selected_complex: Optional[str] = None) -> Dict[str, Any]
                 "characteristics": f"최근 평균 실거래가 {c_stat['average_eok']}억 원 (최고 {c_stat['max_eok']}억 원), 추세: {c_stat['trend']}",
             }
 
-    # 5. 매매 타이밍 종합 시그널 생성
-    market_timing_signal = (
-        "📊 [강보합 및 선별 매수 구간] 개포우성8차 전세가가 9억대 ➔ 11.1억 원(전세가율 약 40%)으로 선행 상승하며 "
-        "매매가 26.8~27.2억 원대의 탄탄한 하방 지지선을 구축했습니다. 개포현대3차 역시 32평형 28.2억, 58평형 40.5억으로 "
-        "대지지분(평균 30.5평)·독립정산제 가치를 반영 중입니다. 일반 매매는 직전 신고가 대비 3~5천만 원 눌림목 급매 출현 시 실거주 매수가 유리하며, "
-        f"특히 현재 진행 중인 법원 경매 유찰 물건({len(active_auctions)}건)은 토지거래허가구역 실거주 2년 의무가 면제되므로 전세 레버리지 투자 적기입니다."
-    )
+    # relationship_summary 동적 결정
+    if selected_complex and selected_complex not in ("all", "전체"):
+        if selected_complex in custom_profiles and "relationship_summary" in custom_profiles[selected_complex]:
+            rel_summary = custom_profiles[selected_complex]["relationship_summary"]
+        elif selected_complex in KNOWN_COMPLEX_PRESETS:
+            bundle = build_auto_complex_dataset(selected_complex)
+            rel_summary = bundle["relationship_summary"]
+        elif selected_complex in ("개포우성8차", "개포현대3차"):
+            rel_summary = DEFAULT_COMPLEX_PROFILES["relationship_summary"]
+        else:
+            rel_summary = {
+                "title": f"{selected_complex} 맞춤형 시세 트렌드 및 매매 타이밍 분석",
+                "location_corridor": f"{selected_complex} 단지 및 주요 생활 인프라 연계 축",
+                "combined_households": f"등록된 시계열 데이터 {len(target_trades)}건",
+                "key_issue": f"{selected_complex}의 실거래가 변화와 전세가 하방 지지력, 최근 정책 영향을 종합해 최적의 매매 타이밍을 진단합니다.",
+                "buying_watch_points": [
+                    f"선행 지표: {selected_complex} 전세 거래 추이 및 매매가 갭 축소 여부",
+                    f"시장 신호: 최근 매물 호가 대비 실거래가 체결 비율",
+                    f"경매/급매: 인근 법원 경매 및 급매물 출회 시 낙찰가율 비교",
+                ],
+            }
+    else:
+        rel_summary = {
+            "title": "관심 단지 워치리스트 통합 비교 분석",
+            "location_corridor": f"총 {len(by_complex)}개 단지 모니터링 중",
+            "combined_households": f"전체 실거래 {len(trade_items)}건 분석",
+            "key_issue": "워치리스트에 등록된 단지들의 가격대, 전세가율, 상승 추세를 비교하여 최적의 투자 및 갈아타기 타이밍을 비교 진단합니다.",
+            "buying_watch_points": [
+                "단지별 실거래가 상승률 및 최고가 경신 빈도 비교",
+                "전세가율이 높은 단지(갭투자 유리) vs 대지지분이 높은 단지(재건축 유리) 선별",
+                "법원 경매 및 정책 규제지역 여부에 따른 실투자금 포트폴리오 구성",
+            ],
+        }
+
+    profiles = {
+        "relationship_summary": rel_summary,
+        "complexes": merged_complexes,
+    }
+
+    # 5. 매매 타이밍 종합 시그널 동적 생성
+    if selected_complex and selected_complex not in ("all", "전체") and selected_complex in by_complex:
+        c_stat = by_complex[selected_complex]
+        market_timing_signal = (
+            f"📊 [{selected_complex} 집중 진단] 등록된 {c_stat['count']}건 분석 결과 평균 {c_stat['average_eok']}억 원"
+            f"(최고 {c_stat['max_eok']}억, 최근 {c_stat['latest_trade']['value_eok']}억)으로 '{c_stat['trend']}' 흐름입니다. "
+            f"전세가 하방 지지력과 최근 실거래 호가를 종합 분석하여 매수·매도 타이밍을 제공합니다."
+        )
+    elif selected_complex in ("개포우성8차", "개포현대3차"):
+        market_timing_signal = (
+            "📊 [강보합 및 선별 매수 구간] 개포우성8차 전세가가 9억대 ➔ 11.1억 원(전세가율 약 40%)으로 선행 상승하며 "
+            "매매가 26.8~27.2억 원대의 탄탄한 하방 지지선을 구축했습니다. 개포현대3차 역시 32평형 28.2억, 58평형 40.5억으로 "
+            "대지지분(평균 30.5평)·독립정산제 가치를 반영 중입니다."
+        )
+    else:
+        market_timing_signal = (
+            f"📊 [전체 단지 통합 모니터링] 총 {len(by_complex)}개 관심 단지의 평균 실거래가는 {round(metrics['average']/10000, 2)}억 원이며, "
+            f"전반적인 시장 추세는 '{trend_str}' 상태입니다. 상단 워치리스트에서 특정 단지를 선택하시면 맞춤형 정밀 진단이 제공됩니다."
+        )
 
     return {
         "period": period,

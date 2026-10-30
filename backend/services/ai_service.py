@@ -334,6 +334,7 @@ def build_system_prompt(summary: Dict[str, Any], selected_complex: Optional[str]
 def _generate_smart_analytical_reply(
     user_message: str,
     summary: Dict[str, Any],
+    selected_complex: Optional[str] = None,
 ) -> Tuple[str, List[str]]:
     """
     아직 .env에 GEMINI_API_KEY를 넣기 전이거나 일시적 네트워크 오류 시에도,
@@ -342,35 +343,50 @@ def _generate_smart_analytical_reply(
     q = user_message.strip()
     tools_used: List[str] = []
     by_complex = summary.get("by_complex", {})
-    w8 = by_complex.get("개포우성8차", {})
-    h3 = by_complex.get("개포현대3차", {})
+    profiles_dict = summary.get("complex_profiles", {}).get("complexes", {})
     auctions = summary.get("auction_alerts", {})
     policies = summary.get("policy_and_transit", [])
+
+    # 대상 단지 결정
+    target_c = selected_complex if (selected_complex and selected_complex not in ("all", "전체")) else None
+    if not target_c and by_complex:
+        # 질문 내용에 단지명이 포함되어 있는지 감지
+        for c_k in by_complex.keys():
+            if c_k in q:
+                target_c = c_k
+                break
 
     sections: List[str] = []
 
     # 1. 경매 관련 질문 감지
-    if any(k in q for k in ("경매", "입찰", "유찰", "낙찰", "타경", "토허제 면제")):
+    if any(k in q for k in ("경매", "입찰", "유찰", "낙찰", "타경", "토허제 면제", "토허제")):
         tools_used.append("simulate_auction_bid")
         active_items = auctions.get("active_items", [])
         past_items = auctions.get("past_winning_cases", [])
         lines = ["### 🚨 포착된 경매 물건 및 입찰가·수익률 분석"]
         if active_items:
-            for a in active_items:
+            # 타겟 단지가 있으면 해당 단지 우선 필터
+            if target_c:
+                matched = [a for a in active_items if target_c in a["complex_name"] or target_c in a["memo"]]
+                items_to_show = matched if matched else active_items
+            else:
+                items_to_show = active_items
+
+            for a in items_to_show[:3]:
                 is_w8 = "우성8차" in a["memo"]
-                jeonse_est = 10.8 if is_w8 else 13.5
+                jeonse_est = 10.8 if is_w8 else (round(a["ref_market_eok"] * 0.45, 1))
                 bid_low = round(a["ref_market_eok"] * 0.88, 1)
                 bid_high = round(a["ref_market_eok"] * 0.93, 1)
                 lines.append(
                     f"- **[{a['complex_name']} 진행 물건]** ({a['date']} 기준)\n"
                     f"  - **물건 상세**: {a['memo']}\n"
                     f"  - **가격 메리트**: 최근 실거래 시세(**{a['ref_market_eok']}억 원**) 대비 현재 최저입찰가는 **{a['value_eok']}억 원**으로 약 **{a['safety_margin_eok']}억 원(-{a['discount_pct']}%)**의 안전마진이 확보된 상태입니다.\n"
-                    f"  - **적정 입찰가 가이드**: 과거 강남 재건축 경매 낙찰가율 및 경쟁률을 고려할 때 시세의 88~93% 선인 **{bid_low}억 ~ {bid_high}억 원** 구간이 유효 입찰권으로 분석됩니다.\n"
-                    f"  - **🔥 핵심 특전 (토지거래허가구역 실거주 면제)**: 일반 매매와 달리 **법원 경매 낙찰 시 2년 실거주 의무가 면제**됩니다. 낙찰 직후 전세(약 **{jeonse_est}억 원**)를 세팅하면 **실투자금 약 {round(bid_low - jeonse_est, 1)}억 ~ {round(bid_high - jeonse_est, 1)}억 원**으로 진입 가능합니다."
+                    f"  - **적정 입찰가 가이드**: 시세의 88~93% 선인 **{bid_low}억 ~ {bid_high}억 원** 구간이 유효 입찰권으로 분석됩니다.\n"
+                    f"  - **🔥 핵심 특전 (토지거래허가구역 실거주 면제)**: 일반 매매와 달리 **법원 경매 낙찰 시 실거주 의무가 면제**됩니다. 낙찰 직후 전세(약 **{jeonse_est}억 원**)를 세팅하면 **실투자금 약 {round(bid_low - jeonse_est, 1)}억 ~ {round(bid_high - jeonse_est, 1)}억 원**으로 진입 가능합니다."
                 )
         if past_items:
             lines.append("\n#### 📌 과거 경매 낙찰 레퍼런스")
-            for p in past_items:
+            for p in past_items[:3]:
                 lines.append(f"- **{p['date']} ({p['complex_name']})**: 낙찰가 **{p['value_eok']}억 원** — {p['memo']}")
         sections.append("\n".join(lines))
 
@@ -384,36 +400,56 @@ def _generate_smart_analytical_reply(
                 f"  - {pt['memo']}"
             )
         lines.append(
-            "\n> 💡 **인사이트**: 준공 30년 초과 재건축진단 패스트트랙(도시정비법 개정)과 수서~삼성 축 GTX-A 개통/영동대로 복합개발이 중장기 상승 모멘텀을 제공하고 있으며, 토지거래허가구역 연장으로 인해 실거주 갈아타기 수요와 경매 우회 수요가 동시에 집중되고 있습니다."
+            "\n> 💡 **인사이트**: 도심 정비사업 촉진, 재건축 안전진단 패스트트랙 및 주요 철도 교통망(GTX 등) 확충이 핵심 호재로 작용하고 있으며, 규제지역 여부에 따라 실거주 갈아타기와 갭투자 전략을 선별해야 합니다."
         )
         sections.append("\n".join(lines))
 
-    # 3. 통합재건축 / 연관성 / 스펙 비교 / 전세가 영향 / 기본 시세 브리핑
+    # 3. 단지 시세 / 프로필 / 매매 타이밍 브리핑
     if not sections or any(
         k in q
-        for k in ("우성", "현대", "통합", "재건축", "연관", "전세", "타이밍", "매수", "매매", "시세", "실적", "비교", "층", "대지지분")
+        for k in ("시세", "타이밍", "매수", "매매", "전세", "비교", "스펙", "평형", "대지지분", "용적률", "추천", "얼마", "어때")
     ):
         tools_used.append("get_integrated_redevelopment_analysis")
-        w8_latest = w8.get("latest_trade", {})
-        h3_latest = h3.get("latest_trade", {})
-        sections.append(
-            f"### 📊 개포우성8차 & 개포현대3차 데이터 기반 종합 브리핑\n"
-            f"현재 데이터베이스(`{summary.get('period')}`, 총 **{summary.get('count')}건**)를 분석한 결과입니다.\n\n"
-            f"#### 1️⃣ 단지별 핵심 시세 및 스펙 비교\n"
-            f"- **🏢 개포우성8차 (개포동 179 / 개포로 411)**\n"
-            f"  - **단지 기본 프로필**: 1987년 9월 준공, **최고 9층**, 3개 동 **261세대** (전용 79㎡ 단일 위주), 용적률 **192%**, 평균 대지지분 **약 14.4평**\n"
-            f"  - **시세 요약 ({w8.get('count', 0)}건)**: 평균 **{w8.get('average_eok', 0)}억 원** | 최고가 **{w8.get('max_eok', 0)}억 원** (2026-02 5층) | 최근 거래 **{w8_latest.get('value_eok', 0)}억 원** ({w8_latest.get('date', '')})\n"
-            f"  - **전세 & 매매 관계**: 전세가가 9억대 ➔ **10.5~11.1억 원(전세가율 약 40%)**으로 강하게 상승하며 매매가 26.8~27.2억 원의 하방 경직성을 단단하게 지지하고 있습니다.\n"
-            f"- **🏢 개포현대3차 (개포동 177 / 개포로 409)**\n"
-            f"  - **단지 기본 프로필**: 1986년 3월 준공, **최고 9층**, 5개 동 **198세대** (전용 84·131·163㎡ 중대형 위주), 용적률 **147%**, 평균 대지지분 **약 30.5평**\n"
-            f"  - **시세 요약 ({h3.get('count', 0)}건)**: 전체 평균 **{h3.get('average_eok', 0)}억 원** | 최고가 **58평형 40.5억 원** (2026-09) / **32평형 28.2억 원** (2026-10)\n"
-            f"  - **재건축 땅값 가치**: 전세가율(28~34%)은 낮지만, **용적률 147%와 평균 대지지분 30.5평**이라는 압도적인 토지 지분 가치로 시세가 움직입니다.\n\n"
-            f"#### 2️⃣ 두 단지의 연관성 (통합재건축과 독립정산제)\n"
-            f"- 두 단지는 구룡역~개포동역 사이 개포로변에 나란히 맞닿아 있어 **총 459세대(261+198세대) 통합재건축**을 추진 중입니다.\n"
-            f"- 다만 우성8차(평균 대지지분 14.4평)와 현대3차(평균 대지지분 30.5평)의 지분 격차가 크기 때문에, 단지별 이익과 분담금을 별도로 계산하는 **'독립정산제(독립채산제)'** 합의가 사업 속도의 핵심 포인트입니다.\n\n"
-            f"#### 3️⃣ 현재 매매 타이밍 진단\n"
-            f"- {summary.get('market_timing_signal')}"
-        )
+
+        if target_c and target_c in by_complex:
+            stat = by_complex[target_c]
+            prof = profiles_dict.get(target_c, {})
+            l_trade = stat.get("latest_trade", {})
+            h_trade = stat.get("highest_trade", {})
+            sections.append(
+                f"### 📊 [{target_c}] 데이터 기반 맞춤형 정밀 브리핑\n"
+                f"등록된 시계열 데이터(총 **{stat['count']}건**, 기간 `{stat['period']}`) 분석 결과입니다.\n\n"
+                f"#### 1️⃣ 단지 핵심 스펙 & 입지 프로필\n"
+                f"- **단지명 / 주소**: {prof.get('official_name', target_c)} ({prof.get('road_address', prof.get('jibun_address', '소재지'))})\n"
+                f"- **규모 & 층수**: {prof.get('buildings_and_units', '-')} / {prof.get('floors', '-')}\n"
+                f"- **사업성 지표**: 용적률 **{prof.get('floor_area_ratio', '-')}**, 평균 대지지분 **{prof.get('avg_land_share', '-')}**\n"
+                f"- **교통 & 학군**: {prof.get('subway_school', '-')}\n"
+                f"- **전세 시세 수준**: {prof.get('recent_jeonse_range', '-')}\n\n"
+                f"#### 2️⃣ 실거래가 통계 & 가격 트렌드\n"
+                f"- **평균 매매가**: **{stat['average_eok']}억 원** (최저 {stat['min_eok']}억 ~ 최고 {stat['max_eok']}억)\n"
+                f"- **최근 거래**: **{l_trade.get('value_eok', '-')}억 원** ({l_trade.get('date', '-')}) — `{l_trade.get('memo', '')}`\n"
+                f"- **역대 최고가**: **{h_trade.get('value_eok', '-')}억 원** ({h_trade.get('date', '-')})\n"
+                f"- **최근 추세**: **{stat['trend']}**\n\n"
+                f"#### 3️⃣ AI 매매 타이밍 진단\n"
+                f"- {summary.get('market_timing_signal')}"
+            )
+        else:
+            # 전체 단지 비교 브리핑
+            lines = [
+                f"### 📊 관심 단지 워치리스트 종합 비교 브리핑",
+                f"현재 모니터링 중인 전체 데이터베이스(`{summary.get('period')}`, 총 **{summary.get('count')}건**) 요약입니다.\n",
+            ]
+            for c_k, c_v in by_complex.items():
+                p_info = profiles_dict.get(c_k, {})
+                lines.append(
+                    f"- **🏢 {c_k}** ({c_v['count']}건 분석): 평균 **{c_v['average_eok']}억 원** | 최고 **{c_v['max_eok']}억** | 최근 **{c_v['latest_trade']['value_eok']}억** ({c_v['latest_trade']['date']}) — {c_v['trend']}\n"
+                    f"  - 주요 스펙: {p_info.get('buildings_and_units', '')}, 용적률 {p_info.get('floor_area_ratio', '-')}, 대지지분 {p_info.get('avg_land_share', '-')}"
+                )
+            lines.append(f"\n#### 🎯 종합 매매 타이밍 신호\n- {summary.get('market_timing_signal')}")
+            sections.append("\n".join(lines))
+
+    reply_text = "\n\n---\n\n".join(sections)
+    return reply_text, tools_used
 
     reply_text = "\n\n---\n\n".join(sections)
     return reply_text, tools_used
@@ -608,11 +644,11 @@ def generate_ai_chat_response(
 
             except Exception as e:
                 print(f"[AIService] 외부 AI API 호출 예외 발생 ({e}) -> 내장 스마트 분석 엔진으로 응답합니다.")
-                reply_content, tools_called = _generate_smart_analytical_reply(user_message, summary)
+                reply_content, tools_called = _generate_smart_analytical_reply(user_message, summary, selected_complex=selected_complex)
                 provider = f"{provider} (smart-fallback)"
     else:
         # API 키 설정 전에도 즉시 테스트 가능하도록 내장 데이터 분석 엔진 실행
-        reply_content, tools_called = _generate_smart_analytical_reply(user_message, summary)
+        reply_content, tools_called = _generate_smart_analytical_reply(user_message, summary, selected_complex=selected_complex)
         provider = "gemini-ready (내장 데이터 분석 모드 - .env에 GEMINI_API_KEY 입력 시 실시간 LLM 연동)"
 
     # Step 4: 대화 기록 자동 저장 (conversations 컬렉션)

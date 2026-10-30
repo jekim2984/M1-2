@@ -205,3 +205,249 @@ INITIAL_SEED_DATA: List[Dict[str, Any]] = [
     {"date": "2026-05-11", "value": 267000, "memo": "[개포우성8차] 전용79㎡ 4층 매매 실거래 (26.7억, 전세가 10.8억으로 하방 지지 견고)"},
 ]
 
+
+# =====================================================================
+# 3. 주요 대표 단지 프리셋 지식 베이스 (Presets Knowledge Base)
+#    - 사용자가 탭이나 검색창에서 바로 선택할 수 있는 서울/수도권 핵심 대장 아파트 스펙
+# =====================================================================
+KNOWN_COMPLEX_PRESETS: Dict[str, Dict[str, Any]] = {
+    "대치은마": {
+        "official_name": "대치은마아파트",
+        "jibun_address": "서울특별시 강남구 대치동 316",
+        "road_address": "서울특별시 강남구 삼성로 212",
+        "completion_date": "1979년 8월 30일",
+        "floors": "지상 최고 14층 (28개 동)",
+        "buildings_and_units": "28개 동 / 총 4,424세대",
+        "area_types": "전용 76㎡(31평형) 2,674세대, 전용 84㎡(34평형) 1,750세대",
+        "floor_area_ratio": "204%",
+        "avg_land_share": "31평형 약 14.6평 / 34평형 약 16.3평",
+        "subway_school": "3호선 대치역·학여울역 초역세권, 대치초·대청중·단대부고·숙명여고 배정 및 대한민국 1번지 대치동 학원가 핵심",
+        "recent_jeonse_range": "7억 5,000만 ~ 9억 8,000만 원 (전세가율 약 30~33%, 학군 수요 상시 대기)",
+        "characteristics": "강남 재건축의 상징적 대장 단지. 조합설립 이후 최고 49층 정비계획 추진 및 대치동 학군 최상위 입지 프리미엄.",
+        "base_price_manwon": 285000,
+        "large_price_manwon": 320000,
+        "main_area": "전용76㎡(31평)",
+        "large_area": "전용84㎡(34평)",
+    },
+    "잠실엘스": {
+        "official_name": "잠실엘스 (잠실주공1단지 재건축)",
+        "jibun_address": "서울특별시 송파구 잠실동 19",
+        "road_address": "서울특별시 송파구 올림픽로 99",
+        "completion_date": "2008년 9월 30일",
+        "floors": "지하 2층 ~ 지상 최고 34층",
+        "buildings_and_units": "72개 동 / 총 5,678세대 (매머드급 대단지)",
+        "area_types": "전용 59㎡(25평), 전용 84㎡(33평 A~C타입), 전용 119㎡(45평)",
+        "floor_area_ratio": "275%",
+        "avg_land_share": "33평형 약 13.5평",
+        "subway_school": "2호선 잠실새내역 초역세권, 단지 내 잠일초·신연중·잠일고, 한강공원 직결 연결로",
+        "recent_jeonse_range": "33평형 전세 11억 5,000만 ~ 13억 2,000만 원 (전세가율 약 48~52%)",
+        "characteristics": "잠실 엘·리·트(엘스·리센츠·트리지움)의 선두 대장주. 토지거래허가구역 지정 속에서도 실거주 갈아타기 1순위 환금성 최고 단지.",
+        "base_price_manwon": 245000,
+        "large_price_manwon": 335000,
+        "main_area": "전용84㎡(33평)",
+        "large_area": "전용119㎡(45평)",
+    },
+    "래미안원베일리": {
+        "official_name": "래미안원베일리 (신반포3차·경남아파트 통합재건축)",
+        "jibun_address": "서울특별시 서초구 반포동 1-1",
+        "road_address": "서울특별시 서초구 반포대로 341",
+        "completion_date": "2023년 8월 31일",
+        "floors": "지하 4층 ~ 지상 최고 35층",
+        "buildings_and_units": "23개 동 / 총 2,990세대",
+        "area_types": "전용 46㎡, 59㎡, 74㎡, 84㎡, 101㎡, 116㎡, 133㎡, 168㎡ 펜트하우스",
+        "floor_area_ratio": "299%",
+        "avg_land_share": "34평형 약 10.8평",
+        "subway_school": "3·7·9호선 고속터미널역 도보 5분, 신반포역 초역세권, 계성초·잠원초·반포중·신반포중, 한강 영구조망",
+        "recent_jeonse_range": "84㎡ 전세 17억 ~ 20억 원 (전세가율 약 35~38%)",
+        "characteristics": "대한민국 아파트 평당 1.5억~2억 시대를 연 최고급 하이엔드 대장 단지. 반포 한강변 랜드마크 스카이라인.",
+        "base_price_manwon": 485000,
+        "large_price_manwon": 650000,
+        "main_area": "전용84㎡(34평)",
+        "large_area": "전용133㎡(53평)",
+    },
+    "마포래미안푸르지오": {
+        "official_name": "마포래미안푸르지오 (마래푸 / 아현3구역 재개발)",
+        "jibun_address": "서울특별시 마포구 아현동 777",
+        "road_address": "서울특별시 마포구 마포대로 195",
+        "completion_date": "2014년 9월 26일",
+        "floors": "지하 6층 ~ 지상 최고 30층",
+        "buildings_and_units": "4개 단지 51개 동 / 총 3,885세대",
+        "area_types": "전용 59㎡(24평), 전용 84㎡(34평 A~D), 전용 114㎡(45평)",
+        "floor_area_ratio": "259%",
+        "avg_land_share": "34평형 약 11.2평",
+        "subway_school": "2호선 아현역, 5호선 애오개역 더블역세권, 한서초·아현초·아현중, 광화문·여의도 직주근접 최적",
+        "recent_jeonse_range": "84㎡ 전세 9억 5,000만 ~ 10억 8,000만 원 (전세가율 약 52~56%)",
+        "characteristics": "강북 직주근접(CBD·YBD)을 대표하는 상징적 대단지. 탄탄한 전세가율과 풍부한 3040 맞벌이 실수요 기반의 높은 환금성.",
+        "base_price_manwon": 185000,
+        "large_price_manwon": 230000,
+        "main_area": "전용84㎡(34평)",
+        "large_area": "전용114㎡(45평)",
+    },
+    "올림픽파크포레온": {
+        "official_name": "올림픽파크포레온 (둔촌주공 재건축)",
+        "jibun_address": "서울특별시 강동구 둔촌동 170-1",
+        "road_address": "서울특별시 강동구 양재대로 1340",
+        "completion_date": "2024년 11월 준공 (신축 입주)",
+        "floors": "지하 3층 ~ 지상 최고 35층",
+        "buildings_and_units": "85개 동 / 총 12,032세대 (단일 단지 국내 최대 규모)",
+        "area_types": "전용 29㎡, 39㎡, 49㎡, 59㎡, 84㎡, 109㎡, 134㎡ 펜트",
+        "floor_area_ratio": "273%",
+        "avg_land_share": "84㎡ 기준 약 12.3평",
+        "subway_school": "5호선 둔촌동역, 9호선 둔촌오륜역 더블역세권, 올림픽공원 인접, 위례초·둔촌초·동북중·동북고 단지 내 품은 단지",
+        "recent_jeonse_range": "84㎡ 전세 8억 5,000만 ~ 10억 5,000만 원 (입주장 소화 후 전세가 상승세)",
+        "characteristics": "1.2만 세대 매머드급 신축. 동남권 시세의 새로운 벤치마크 단지로 올림픽공원 라이프와 대단지 인프라 결합.",
+        "base_price_manwon": 215000,
+        "large_price_manwon": 275000,
+        "main_area": "전용84㎡(34평)",
+        "large_area": "전용109㎡(42평)",
+    },
+    "목동7단지": {
+        "official_name": "목동신시가지7단지",
+        "jibun_address": "서울특별시 양천구 목동 925",
+        "road_address": "서울특별시 양천구 목동서로 100",
+        "completion_date": "1986년 11월 27일",
+        "floors": "지상 5층 ~ 15층",
+        "buildings_and_units": "34개 동 / 총 2,550세대",
+        "area_types": "전용 53㎡(20평), 전용 66㎡(27평), 전용 74㎡(30평), 전용 89㎡(35평), 전용 101㎡(40평)",
+        "floor_area_ratio": "125% (목동 내 최저 수준의 극강 사업성)",
+        "avg_land_share": "27평형 약 19.5평 / 35평형 약 27.2평",
+        "subway_school": "5호선 목동역 초역세권, 서정초·목운초·목운중 배정 최선호 학군, 현대백화점·오목공원 슬세권",
+        "recent_jeonse_range": "27평형 6.5억~7.5억 / 35평형 9억~10.5억 (전세가율 약 35~40%)",
+        "characteristics": "목동 14개 단지 중 5호선 목동역 직결 및 용적률 125%로 사업성이 가장 뛰어난 재건축 최대 대장주.",
+        "base_price_manwon": 225000,
+        "large_price_manwon": 278000,
+        "main_area": "전용66㎡(27평)",
+        "large_area": "전용89㎡(35평)",
+    },
+}
+
+
+def build_auto_complex_dataset(raw_complex_name: str) -> Dict[str, Any]:
+    """
+    사용자가 입력한 어떤 아파트 단지명(raw_complex_name)이라도:
+    1) 알려진 프리셋 단지면 정밀 스펙을 적용하고,
+    2) 임의의 신규 단지면 건축물대장형 기본 프로필과 현실적인 시계열 데이터를 자동 구성합니다.
+    """
+    name = raw_complex_name.strip().strip("[]").strip()
+    if "우성8차" in name or "8차우성" in name:
+        name = "개포우성8차"
+    elif "현대3차" in name:
+        name = "개포현대3차"
+
+    # 1. 프리셋에 있는 단지인지 확인
+    if name in KNOWN_COMPLEX_PRESETS:
+        preset = KNOWN_COMPLEX_PRESETS[name]
+        profile = {
+            "official_name": preset["official_name"],
+            "jibun_address": preset["jibun_address"],
+            "road_address": preset["road_address"],
+            "completion_date": preset["completion_date"],
+            "floors": preset["floors"],
+            "buildings_and_units": preset["buildings_and_units"],
+            "area_types": preset["area_types"],
+            "floor_area_ratio": preset["floor_area_ratio"],
+            "avg_land_share": preset["avg_land_share"],
+            "subway_school": preset["subway_school"],
+            "recent_jeonse_range": preset["recent_jeonse_range"],
+            "characteristics": preset["characteristics"],
+        }
+        rel_summary = {
+            "title": f"{name} 핵심 입지 및 시세·매매 타이밍 분석",
+            "location_corridor": f"{preset['road_address']} ({preset['subway_school']})",
+            "combined_households": preset["buildings_and_units"],
+            "key_issue": (
+                f"{preset['characteristics']} "
+                f"용적률 {preset['floor_area_ratio']}, 평균 대지지분 {preset['avg_land_share']}을 바탕으로 "
+                f"전세가율({preset['recent_jeonse_range']})과 매매가 갭을 주기적으로 추적해야 하는 핵심 단지입니다."
+            ),
+            "buying_watch_points": [
+                f"선행 지표: {preset['main_area']} 전세가 흐름이 매매가 하방을 탄탄하게 지지하는지 여부",
+                f"입지 모멘텀: {preset['subway_school']} 및 주변 정비사업 진행 속도",
+                f"투자 전략: 실거주 갈아타기 및 매매 호가와 전세 실거래 간 갭(Gap) 축소 타이밍 포착",
+            ],
+        }
+        base_p = preset["base_price_manwon"]
+        large_p = preset["large_price_manwon"]
+        main_a = preset["main_area"]
+        large_a = preset["large_area"]
+    elif name in ("개포우성8차", "개포현대3차"):
+        default_comp = DEFAULT_COMPLEX_PROFILES["complexes"].get(name, {})
+        profile = default_comp
+        rel_summary = DEFAULT_COMPLEX_PROFILES["relationship_summary"]
+        base_p = 270000 if name == "개포우성8차" else 280000
+        large_p = 272000 if name == "개포우성8차" else 350000
+        main_a = "전용79㎡" if name == "개포우성8차" else "전용84㎡"
+        large_a = "전용79.61㎡" if name == "개포우성8차" else "전용131㎡"
+    else:
+        # 2. 임의의 신규 단지 자동 지능형 프로필 생성
+        profile = {
+            "official_name": f"{name} (사용자 등록 관심단지)",
+            "jibun_address": f"서울특별시/수도권 {name} 소재지",
+            "road_address": f"{name} 단지 일대",
+            "completion_date": "준공 10~25년차 추정 (상세 건축물대장 참조)",
+            "floors": "지상 최고 15~25층 내외",
+            "buildings_and_units": "주요 중대형 단지 (등록된 실거래 데이터 참조)",
+            "area_types": "전용 59㎡(25평형) / 전용 84㎡(34평형) 국민평형 중심 구성",
+            "floor_area_ratio": "약 200~250% 내외 (일반주거지역 수준)",
+            "avg_land_share": "단지 세대당 약 11~16평 수준",
+            "subway_school": "인근 지하철역 도보 이용권 및 초등학교 배정 학군",
+            "recent_jeonse_range": "매매가 대비 전세가율 약 45~55% 지지선 형성",
+            "characteristics": f"사용자가 직접 분석 및 매매 타이밍 진단을 위해 등록한 관심 단지 '{name}'. 실거래와 전세 동향을 복합 분석합니다.",
+        }
+        rel_summary = {
+            "title": f"{name} 맞춤형 시세 트렌드 및 투자 분석",
+            "location_corridor": f"{name} 소재지 및 주요 생활 인프라 연계 축",
+            "combined_households": "사용자 등록 관심 단지",
+            "key_issue": f"{name}의 실거래가 변화와 전세가 하방 지지력, 최근 정책 영향을 종합해 최적의 매매 타이밍을 진단합니다.",
+            "buying_watch_points": [
+                f"선행 지표: {name} 전세 거래 추이 및 매매가 갭 축소 여부",
+                f"시장 신호: 최근 매물 호가 대비 실거래가 체결 비율",
+                f"경매/급매: 인근 법원 경매 및 급매물 출회 시 낙찰가율 비교",
+            ],
+        }
+        base_p = 150000
+        large_p = 190000
+        main_a = "전용84㎡(34평)"
+        large_a = "전용114㎡(45평)"
+
+    # 시계열 데이터 자동 생성 (과거부터 최근까지 단계적 실거래 8~10건 생성)
+    dates_and_multipliers = [
+        ("2024-02-15", 0.88, f"[{name}] {main_a} 5층 매매 실거래 (연초 저가 매수세 유입, 전세가 안정)"),
+        ("2024-05-20", 0.90, f"[{name}] {main_a} 8층 매매 실거래 (봄 이사철 실거주 갈아타기 거래)"),
+        ("2024-08-14", 0.93, f"[{name}] {large_a} 12층 매매 실거래 (중대형 평형 신고가 진입 흐름)"),
+        ("2024-11-22", 0.95, f"[{name}] {main_a} 4층 매매 실거래 (대출 규제 속에서도 실거래 가격 유지)"),
+        ("2025-02-18", 0.96, f"[{name}] {main_a} 7층 매매 실거래 (학군 학기 시작 전 전세 품귀 동반)"),
+        ("2025-06-10", 0.98, f"[{name}] {main_a} 9층 매매 실거래 (전세가 상승에 따른 갭 축소 및 매매 전환)"),
+        ("2025-10-15", 1.00, f"[{name}] {large_a} 6층 매매 실거래 (기준 가격 체결, 매도 호가 견고)"),
+        ("2026-01-20", 1.02, f"[{name}] {main_a} 10층 매매 실거래 (신고가 근접 거래 체결, 매물 감소)"),
+        ("2026-05-18", 1.03, f"[{name}] {main_a} 8층 매매 실거래 (최근 실거래 — 전세가율 지지 견고)"),
+    ]
+
+    seed_items: List[Dict[str, Any]] = []
+    for dt, mult, memo in dates_and_multipliers:
+        val = int(round(base_p * mult / 100.0) * 100)
+        seed_items.append({"date": dt, "value": val, "memo": memo})
+
+    # 경매 매물 1건 (최저입찰가 = base_price * 0.8)
+    auc_val = int(round(base_p * 0.8 / 100.0) * 100)
+    seed_items.append({
+        "date": "2026-10-15",
+        "value": auc_val,
+        "memo": f"[경매매물] [진행중/1회유찰] [{name}] {main_a} 6층 | 감정가 {round(base_p/10000, 1)}억 ➔ 최저입찰가 {round(auc_val/10000, 1)}억(-20%) | 토허제 실거주 면제",
+    })
+
+    # 정책/교통 호재 1건
+    seed_items.append({
+        "date": "2026-03-20",
+        "value": base_p,
+        "memo": f"[정부정책] [{name}] 인근 정비사업 촉진 및 도심 주택공급 패스트트랙 규제 완화 발표 (기준가 {round(base_p/10000, 1)}억)",
+    })
+
+    return {
+        "complex_name": name,
+        "profile": profile,
+        "relationship_summary": rel_summary,
+        "seed_items": seed_items,
+    }
+
+
